@@ -30,10 +30,11 @@ class Element {
   reportValidity() { return !this.validationMessage; }
 }
 
-function app({entries=[],draft=null,restoreResult=true}={}) {
+function app({entries=[],draft=null,restoreResult=true,code=null}={}) {
   const elements = new Map();
   const $ = id => { if (!elements.has(id)) elements.set(id,new Element(id)); return elements.get(id); };
   const values = new Map([[STORAGE,JSON.stringify(entries)]]);
+  if(code)values.set('curse-note.cloud.active.v1',JSON.stringify({code}));
   if (draft) values.set(DRAFT,JSON.stringify(draft));
   const storage = {getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)};
   const windowEvents = new Map(), documentEvents = new Map();
@@ -45,7 +46,7 @@ function app({entries=[],draft=null,restoreResult=true}={}) {
   BrowserURL.createObjectURL=blob=>{downloads.push(blob);return 'blob:test';}; BrowserURL.revokeObjectURL=()=>{};
   let hooks;
   const notices=[];
-  const cloud={start:async options=>{hooks=options;return false;},notify:entries=>{notices.push(copy(entries));return true;},getRecoveryCode:()=>null,restore:async()=>restoreResult,syncNow:async()=>false};
+  const cloud={start:async options=>{hooks=options;return false;},notify:entries=>{notices.push(copy(entries));return true;},getRecoveryCode:()=>code,restore:async()=>restoreResult,syncNow:async()=>false};
   const window={CurseCloud:cloud,scrollTo(){},addEventListener:(name,fn)=>{const list=windowEvents.get(name)||[];list.push(fn);windowEvents.set(name,list);}};
   let timerId=0; const timers=new Map();
   const context=vm.createContext({window,document,localStorage:storage,navigator:{},crypto:webcrypto,Blob,URL:BrowserURL,TextEncoder,Date,console,
@@ -103,6 +104,17 @@ test('import limit rejects the combined vault without changing saved records',as
   assert.equal(ui.entries.length,500); assert.equal(ui.notices.length,0); assert.match(ui.$('vaultMessage').textContent,/한도/);
 });
 
+test('import uses the PostgreSQL JSON size including formatting overhead',async()=>{
+  const entries=Array.from({length:500},(_,i)=>record({id:`00000000-0000-4000-8000-${String(i).padStart(12,'0')}`,body:'x'.repeat(1900)}));
+  assert.ok(Buffer.byteLength(JSON.stringify(entries))<1048576,'compact JSON must fit to distinguish server size');
+  const ui=app(); await ui.import(backup(entries)); assert.equal(ui.entries.length,0); assert.match(ui.$('vaultMessage').textContent,/한도/);
+});
+
+test('reimporting the same backup does not duplicate unchanged content',async()=>{
+  const ui=app(), text=backup([record()]); await ui.import(text); await ui.import(text);
+  assert.equal(ui.entries.length,1); assert.match(ui.$('vaultMessage').textContent,/0개의 기록/);
+});
+
 test('remote changes preserve an in-progress draft separately from the changed record',async()=>{
   const ui=app({entries:[record()]}); await ui.$('entryList').children[0].click();
   ui.$('entryBody').value='작성 중인 초안'; await ui.$('entryBody').fire('input');
@@ -120,4 +132,18 @@ test('getEntries and onRemote round trip identical valid application records',as
 test('restore resolving false never displays a successful restore',async()=>{
   const ui=app({restoreResult:false}); ui.$('restoreCode').value='cn1_'+'a'.repeat(43);
   await ui.$('restoreForm').fire('submit'); assert.notEqual(ui.$('vaultMessage').textContent,'노트를 불러왔습니다.');
+});
+
+test('another tab changing recovery vault cannot mix records or overwrite its storage',async()=>{
+  const codeA='cn1_'+'a'.repeat(43),codeB='cn1_'+'b'.repeat(43),ui=app({entries:[record()],code:codeA});
+  await ui.$('entryList').children[0].click(); ui.$('entryBody').value='A 보관함 작성 중'; await ui.$('entryBody').fire('input');
+  const other=[record({body:'B 보관함 기록'})]; ui.storage.setItem('curse-note.cloud.active.v1',JSON.stringify({code:codeB})); ui.storage.setItem(STORAGE,JSON.stringify(other));
+  await ui.storageEvent(STORAGE); await ui.$('newEntryBtn').click();
+  assert.equal(ui.entries[0].body,'본문'); assert.equal(ui.$('entryBody').value,'A 보관함 작성 중'); assert.deepEqual(JSON.parse(ui.storage.getItem(STORAGE)),other);
+  assert.equal(ui.notices.length,0); assert.equal(JSON.parse(ui.storage.getItem(DRAFT+':'+codeA)).body,'A 보관함 작성 중'); assert.equal(ui.storage.getItem(DRAFT+':'+codeB),null);
+});
+
+test('a failed remote local-storage write keeps the displayed notebook and reports failure',async()=>{
+  const ui=app({entries:[record()]}); ui.storage.setItem=()=>{throw new Error('quota');};
+  assert.equal(ui.remote([record({body:'uncommitted remote'})]),false); assert.equal(ui.entries[0].body,'본문');
 });
