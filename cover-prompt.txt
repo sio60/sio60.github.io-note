@@ -1,0 +1,12 @@
+Method: built-in image_gen edit
+Reference: C:/Users/yoon/show/your-name-notebook/dist/assets/cover.png
+Generated output: C:/Users/yoon/.codex/generated_images/01a12dfc-8243-7c31-9940-cfcaf775018d/exec-4af8b899-8c9d-4801-8c6e-aa7bdaa1f12d.png
+Final asset: dist/assets/cover-curse-note.png
+Transparent background: false
+
+Use case: text-localization.
+Input image: edit target, a front-facing full-bleed black notebook cover.
+Primary edit: Replace ONLY the existing Korean title with the exact English title "CURSE NOTE" in WHITE ink. It must read C U R S E, a space, then N O T E. No Korean text remains. No other text appears.
+Typography: draw the letters directly on the cover in the recognizable Death Note notebook lettering mood: narrow elongated uppercase Latin letterforms, very thin jagged scratched hand-drawn ink strokes, angular pointed terminals, slightly irregular heights and spacing, imperfect sinister handwriting. White ink with subtle distress. NOT a clean serif typeface, NOT generic typed text, NOT bold brush calligraphy. Keep it elegant and readable. The exact title "CURSE NOTE" goes on ONE horizontal line, centered across approximately 70% of the cover width, near the upper quarter of the cover, in the same region as the existing lettering.
+Invariants: preserve the black worn matte leather-paper grain, scuffs, softly worn gray border, flat orthographic rectangular 2:3 portrait composition, empty lower area, even lighting, opaque background and absence of external margins. Change the title only. Keep the rest of the cover visually unchanged.
+Avoid: red lettering, any other red elements, extra words, subtitles, Korean letters, skulls, symbols, objects, drips, glow, shadows, book thickness, perspective, fingers, surrounding scenery. WHITE CURSE NOTE on the original black cover, nothing else.

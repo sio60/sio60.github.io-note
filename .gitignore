@@ -1,0 +1,16 @@
+# Credentials and local runtime state must never be published.
+.env
+.env.*
+!.env.example
+node_modules/
+supabase/.temp/
+supabase/.branches/
+
+# Local checks and browser automation output.
+test-results/
+playwright-report/
+.cache/
+*.log
+__pycache__/
+.DS_Store
+Thumbs.db
